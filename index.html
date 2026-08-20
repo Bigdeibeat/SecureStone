@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Casabona Mármoles</title>
+
+  <!-- Three.js r160 ESM via importmap -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #000;
+      color: #fff;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* ── Category nav ─────────────────────────────────────────── */
+    #nav {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 36px;
+      padding: 18px 30px 10px;
+      flex-shrink: 0;
+    }
+
+    .cat-btn {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.45);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 4px 0;
+      transition: color 0.2s;
+      white-space: nowrap;
+    }
+    .cat-btn:hover { color: #fff; }
+    .cat-btn.active { color: #fff; }
+
+    /* Mobile Category Dropdown */
+    .cat-select-wrap {
+      display: none;
+      position: relative;
+      width: 100%;
+      max-width: 280px;
+      margin: 0 auto;
+    }
+    .cat-select {
+      width: 100%;
+      appearance: none;
+      -webkit-appearance: none;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 8px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 9px 36px 9px 16px;
+      text-align: center;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .cat-select:focus {
+      border-color: rgba(255, 255, 255, 0.6);
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .cat-select option {
+      background: #14161a;
+      color: #fff;
+    }
+    .cat-select-icon {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      font-size: 0.60rem;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    /* ── Responsive adjustments for mobile ─────────────────────── */
+    @media (max-width: 860px) {
+      #nav {
+        padding: 28px 16px 14px;
+        gap: 0;
+      }
+      .cat-btn {
+        display: none;
+      }
+      .cat-select-wrap {
+        display: block;
+      }
+      #rot-ctrl {
+      padding: 4px 16px 6px;
+    }
+      #material-name {
+        padding: 6px 0 8px;
+        font-size: 0.74rem;
+      }
+      #circles-outer {
+        height: 80px;
+        -webkit-mask-image: linear-gradient(to right, transparent 0%, black 50px, black calc(100% - 50px), transparent 100%);
+        mask-image: linear-gradient(to right, transparent 0%, black 50px, black calc(100% - 50px), transparent 100%);
+      }
+      .mat-circle {
+        width: 52px;
+        height: 52px;
+      }
+    }
+
+    /* ── 3D canvas area ───────────────────────────────────────── */
+    #canvas-wrap {
+      flex: 1;
+      position: relative;
+      cursor: default;
+      min-height: 0;
+    }
+    #canvas-wrap.on-cube  { cursor: grab; }
+    #canvas-wrap.dragging { cursor: grabbing; }
+    #three-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* ── Controls bar (rotation speed) ───────────────────────────── */
+    #rot-ctrl {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 40px 8px;
+      flex-shrink: 0;
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+    }
+    #rot-ctrl label { color: rgba(255,255,255,0.4); }
+    #rot-ctrl input[type=range] {
+      width: 90px;
+      accent-color: #fff;
+      cursor: pointer;
+    }
+    #rot-ctrl span { color: rgba(255,255,255,0.6); min-width: 28px; }
+
+    /* ── Material name ────────────────────────────────────────── */
+    #material-name {
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #fff;
+      padding: 10px 0 12px;
+      flex-shrink: 0;
+      min-height: 34px;
+    }
+
+    /* ── Circles slider ───────────────────────────────────────────── */
+    #circles-outer {
+      flex-shrink: 0;
+      height: 90px;
+      position: relative;
+      overflow-x: scroll;     /* ← outer is the scroll container */
+      overflow-y: hidden;
+      scrollbar-width: none;
+      -webkit-mask-image: linear-gradient(to right, transparent 0%, black 180px, black calc(100% - 180px), transparent 100%);
+      mask-image: linear-gradient(to right, transparent 0%, black 180px, black calc(100% - 180px), transparent 100%);
+    }
+    #circles-outer::-webkit-scrollbar { display: none; }
+
+    #circles-row {
+      display: flex;
+      gap: 10px;
+      width: max-content;     /* shrinks to fit content */
+      min-width: 100%;        /* stretches if content is narrower than viewport */
+      height: 100%;
+      align-items: center;
+      padding: 6px 40px 10px; /* side padding so edges don't hug the screen */
+      justify-content: center; /* centers when content < container */
+      flex-wrap: nowrap;
+      cursor: grab;
+    }
+    #circles-row.dragging { cursor: grabbing; }
+
+    .mat-circle {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.55);
+      overflow: hidden;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: border-color 0.2s, transform 0.15s;
+      position: relative;
+    }
+    .mat-circle:hover { border-color: #fff; transform: scale(1.08); }
+    .mat-circle.active { border-color: #fff; border-width: 2.5px; }
+    .mat-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 50%;
+    }
+
+    /* Tooltip flotante que sigue al cursor */
+    #tooltip {
+      position: fixed;
+      background: rgba(0,0,0,0.82);
+      color: #fff;
+      font-size: 0.68rem;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 5px 10px;
+      border-radius: 4px;
+      pointer-events: none;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.12s;
+      z-index: 9999;
+      transform: translate(14px, -50%);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Category nav -->
+  <nav id="nav"></nav>
+
+  <!-- Controls bar (below categories) -->
+  <div id="rot-ctrl">
+    <label for="rot-slider">Rotación</label>
+    <input type="range" id="rot-slider" min="0" max="3" step="0.05" value="0.5">
+    <span id="rot-val">0.50</span>
+  </div>
+
+  <!-- Floating tooltip -->
+  <div id="tooltip"></div>
+
+  <!-- Three.js canvas -->
+  <div id="canvas-wrap">
+    <canvas id="three-canvas"></canvas>
+  </div>
+
+  <!-- Active material name -->
+  <div id="material-name">—</div>
+
+  <!-- Material circles -->
+  <div id="circles-outer">
+    <div id="circles-row"></div>
+  </div>
+
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+    import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+    // ── Catalog ────────────────────────────────────────────────────
+    await new Promise(res => {
+      const s = document.createElement('script');
+      s.src = 'data/materials.js';
+      s.onload = res;
+      document.head.appendChild(s);
+    });
+    const catalog = window.MARBLE_CATALOG || [];
+
+    // ── Categories ─────────────────────────────────────────────────
+    // Orden tal como aparece en securestone.es/es/materiales
+    const CAT_ORDER = ['Todos', 'Mármoles', 'Granitos', 'Calizas', 'Areniscas', 'Exóticas', 'Cuarcita', 'Travertino', 'Varios'];
+    // Incluir solo categorías que existen en el catálogo
+    const existingCats = new Set(catalog.map(m => m.category));
+    const cats = CAT_ORDER.filter(c => c === 'Todos' || existingCats.has(c));
+    let activeCat = 'Todos';
+
+    const nav = document.getElementById('nav');
+
+    // 1. Desktop category buttons
+    cats.forEach(cat => {
+      const btn = document.createElement('button');
+      btn.className = 'cat-btn' + (cat === activeCat ? ' active' : '');
+      const count = cat === 'Todos' ? catalog.length : catalog.filter(m => m.category === cat).length;
+      btn.textContent = `${cat.toUpperCase()} (${count})`;
+      btn.addEventListener('click', () => {
+        setCategory(cat);
+      });
+      nav.appendChild(btn);
+    });
+
+    // 2. Mobile category dropdown
+    const selectWrap = document.createElement('div');
+    selectWrap.className = 'cat-select-wrap';
+
+    const selectEl = document.createElement('select');
+    selectEl.className = 'cat-select';
+    selectEl.id = 'cat-select';
+
+    cats.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      const count = cat === 'Todos' ? catalog.length : catalog.filter(m => m.category === cat).length;
+      opt.textContent = `${cat.toUpperCase()} (${count})`;
+      selectEl.appendChild(opt);
+    });
+
+    selectEl.addEventListener('change', (e) => {
+      setCategory(e.target.value);
+    });
+
+    const selectIcon = document.createElement('span');
+    selectIcon.className = 'cat-select-icon';
+    selectIcon.textContent = '▼';
+
+    selectWrap.appendChild(selectEl);
+    selectWrap.appendChild(selectIcon);
+    nav.appendChild(selectWrap);
+
+    function setCategory(cat) {
+      activeCat = cat;
+      selectEl.value = cat;
+      document.querySelectorAll('.cat-btn').forEach(b => {
+        b.classList.toggle('active', b.textContent.startsWith(cat.toUpperCase()));
+      });
+      buildCircles();
+    }
+
+    // ── Three.js setup ─────────────────────────────────────────────
+    const canvas  = document.getElementById('three-canvas');
+    const wrap    = document.getElementById('canvas-wrap');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    const scene  = new THREE.Scene();
+    scene.background = new THREE.Color(0x000000);  // pure black, no HDRI bg
+
+    const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
+    camera.position.set(0, 0, 6.0);
+
+    // ── Cube with Beveled Edges & Strict PBR Material ────────────────
+    const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+    const geo = new RoundedBoxGeometry(1.4, 1.4, 1.4, 6, 0.025);
+    const mat = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      roughness: 0.12,                     // Default roughness when no map
+      specularIntensity: 0.2,              // Default specular when no map
+      specularColor: new THREE.Color(0xffffff),
+      normalScale: new THREE.Vector2(0, 0),// Default normal = 0 (completely flat)
+      metalness: 0.0,
+      clearcoat: 0.0,
+      clearcoatRoughness: 0.0,
+      envMapIntensity: 1.0
+    });
+    const cube = new THREE.Mesh(geo, mat);
+    cube.rotation.x = 0.35;
+    cube.rotation.y = -0.6;
+    scene.add(cube);
+
+    // ── Texture loader with Max Anisotropic Filtering ───────────────
+    const texLoader = new THREE.TextureLoader();
+    const texCache  = new Map();
+
+    function loadTex(url, isData = false) {
+      if (!url) return null;
+      const cacheKey = url + (isData ? '_data' : '_color');
+      if (texCache.has(cacheKey)) return texCache.get(cacheKey);
+      const t = texLoader.load(url);
+      t.colorSpace = isData ? THREE.NoColorSpace : THREE.SRGBColorSpace;
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.anisotropy = maxAnisotropy;
+      t.generateMipmaps = true;
+      t.minFilter = THREE.LinearMipmapLinearFilter;
+      t.magFilter = THREE.LinearFilter;
+      texCache.set(cacheKey, t);
+      return t;
+    }
+
+    // ── Apply material to cube ─────────────────────────────────────
+    let activeMaterialId = null;
+
+    function applyMaterial(item) {
+      activeMaterialId = item.id;
+      const maps = item.maps || {};
+
+      // 1. Diffuse (color)
+      mat.map = maps.diffuse ? loadTex(maps.diffuse, false) : null;
+
+      // 2. Normal Map (if null, normalScale is 0 = flat)
+      mat.normalMap = maps.normal ? loadTex(maps.normal, true) : null;
+      if (mat.normalScale) {
+        mat.normalScale.set(maps.normal ? 1.0 : 0.0, maps.normal ? 1.0 : 0.0);
+      }
+
+      // 3. Roughness (if no map, numeric fallback: 0.12)
+      mat.roughnessMap = maps.roughness ? loadTex(maps.roughness, true) : null;
+      mat.roughness = 0.12;
+
+      // 4. Specular (if no map, numeric fallback: 0.2)
+      mat.specularIntensityMap = maps.specular ? loadTex(maps.specular, true) : null;
+      mat.specularIntensity = 0.2;
+
+      // Strict PBR: No metalness, no clearcoat
+      mat.metalness = 0.0;
+      mat.clearcoat = 0.0;
+
+      mat.needsUpdate = true;
+      document.getElementById('material-name').textContent = item.name.toUpperCase();
+      // Mark active circle
+      document.querySelectorAll('.mat-circle').forEach(c => {
+        c.classList.toggle('active', +c.dataset.id === item.id);
+      });
+    }
+
+    // ── HDRI ───────────────────────────────────────────────────────
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    pmrem.compileEquirectangularShader();
+
+    new RGBELoader().load('assets/env/brown_photostudio_01_4k.hdr', (hdr) => {
+      const env = pmrem.fromEquirectangular(hdr).texture;
+      hdr.dispose();
+      pmrem.dispose();
+      scene.environment = env;   // reflections only, bg stays black
+    });
+
+    // ── Auto-rotation speed slider ──────────────────────────────────
+    let autoSpeed = 0.5;
+    const rotSlider = document.getElementById('rot-slider');
+    const rotVal    = document.getElementById('rot-val');
+    rotSlider.addEventListener('input', e => {
+      autoSpeed = parseFloat(e.target.value);
+      rotVal.textContent = autoSpeed.toFixed(2);
+    });
+
+    // ── Drag rotation with world-space axes and inertia ─────────────
+    let dragging  = false;
+    let prevX = 0, prevY = 0;
+    let velX  = 0, velY  = 0;
+    const DECAY = 0.93;
+    const MIN_V = 0.0003;
+    const raycaster = new THREE.Raycaster();
+    const pointer   = new THREE.Vector2();
+
+    const WORLD_AXIS_Y = new THREE.Vector3(0, 1, 0); // World vertical axis
+    const WORLD_AXIS_X = new THREE.Vector3(1, 0, 0); // World horizontal axis
+
+    wrap.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+
+      // Only start drag if the click lands on the cube
+      const rect = wrap.getBoundingClientRect();
+      pointer.x =  ((e.clientX - rect.left)  / rect.width)  * 2 - 1;
+      pointer.y = -((e.clientY - rect.top)   / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObject(cube);
+      if (hits.length === 0) return;  // clicked background → ignore
+
+      dragging = true;
+      prevX = e.clientX; prevY = e.clientY;
+      velX = 0; velY = 0;
+      wrap.classList.add('dragging');
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (dragging) {
+        const dx = e.clientX - prevX;
+        const dy = e.clientY - prevY;
+        velY =  dx * 0.008;
+        velX =  dy * 0.008;
+        // World-space rotation: always follows screen horizontal/vertical
+        cube.rotateOnWorldAxis(WORLD_AXIS_Y, velY);
+        cube.rotateOnWorldAxis(WORLD_AXIS_X, velX);
+        prevX = e.clientX; prevY = e.clientY;
+        return;
+      }
+
+      // Update grab cursor: check if mouse is over the cube
+      const rect = wrap.getBoundingClientRect();
+      pointer.x =  ((e.clientX - rect.left)  / rect.width)  * 2 - 1;
+      pointer.y = -((e.clientY - rect.top)   / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const onCube = raycaster.intersectObject(cube).length > 0;
+      wrap.classList.toggle('on-cube', onCube);
+    });
+
+    window.addEventListener('mouseup', () => {
+      dragging = false;
+      wrap.classList.remove('dragging');
+    });
+
+    // Touch support
+    let prevTX = 0, prevTY = 0;
+    wrap.addEventListener('touchstart', e => {
+      const t = e.touches[0];
+      prevTX = t.clientX; prevTY = t.clientY;
+      velX = 0; velY = 0;
+    }, { passive: true });
+    wrap.addEventListener('touchmove', e => {
+      const t = e.touches[0];
+      const dx = t.clientX - prevTX, dy = t.clientY - prevTY;
+      velY =  dx * 0.008; velX = dy * 0.008;
+      cube.rotateOnWorldAxis(WORLD_AXIS_Y, velY);
+      cube.rotateOnWorldAxis(WORLD_AXIS_X, velX);
+      prevTX = t.clientX; prevTY = t.clientY;
+    }, { passive: true });
+
+    // ── Resize ─────────────────────────────────────────────────────
+    function resize() {
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      // Responsive distance: 6.5 on mobile, 6.0 on desktop
+      camera.position.z = window.innerWidth <= 860 ? 6.5 : 6.0;
+      camera.updateProjectionMatrix();
+    }
+    new ResizeObserver(resize).observe(wrap);
+    resize();
+
+    // ── Render loop ────────────────────────────────────────────────
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (!dragging) {
+        // Inertia from manual drag in world space
+        if (Math.abs(velX) > MIN_V || Math.abs(velY) > MIN_V) {
+          cube.rotateOnWorldAxis(WORLD_AXIS_Y, velY);
+          cube.rotateOnWorldAxis(WORLD_AXIS_X, velX);
+          velX *= DECAY;
+          velY *= DECAY;
+        } else {
+          velX = 0; velY = 0;
+          // Auto-rotation in world space (1 unit vertical per 2 horizontal)
+          cube.rotateOnWorldAxis(WORLD_AXIS_Y, autoSpeed * 0.006);
+          cube.rotateOnWorldAxis(WORLD_AXIS_X, autoSpeed * 0.003);
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // ── Build material circles ─────────────────────────────────────
+    const circlesRow = document.getElementById('circles-row');
+    const circlesOuter = document.getElementById('circles-outer');
+    const tooltip    = document.getElementById('tooltip');
+
+    // Move tooltip with cursor globally
+    window.addEventListener('mousemove', e => {
+      tooltip.style.left = e.clientX + 'px';
+      tooltip.style.top  = e.clientY + 'px';
+    });
+
+    function buildCircles() {
+      circlesRow.innerHTML = '';
+      const filtered = activeCat === 'Todos'
+        ? catalog
+        : catalog.filter(m => m.category === activeCat);
+
+      filtered.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'mat-circle' + (item.id === activeMaterialId ? ' active' : '');
+        div.dataset.id   = item.id;
+        div.dataset.name = item.name;
+        const img = document.createElement('img');
+        img.src     = item.maps.diffuse;
+        img.alt     = item.name;
+        img.loading = 'lazy';
+        div.appendChild(img);
+
+        // Tooltip events
+        div.addEventListener('mouseenter', () => {
+          tooltip.textContent  = item.name;
+          tooltip.style.opacity = '1';
+        });
+        div.addEventListener('mouseleave', () => {
+          tooltip.style.opacity = '0';
+        });
+
+        div.addEventListener('click', () => applyMaterial(item));
+        circlesRow.appendChild(div);
+      });
+
+      // Center: scroll outer so middle item is in center
+      const items = circlesRow.querySelectorAll('.mat-circle');
+      const mid   = items[Math.floor(items.length / 2)];
+      if (mid) {
+        setTimeout(() => {
+          mid.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'center' });
+          rowScrollX = circlesOuter.scrollLeft;
+        }, 30);
+      }
+    }
+
+    // ── Drag-to-scroll on circles ──────────────────────────────────
+    let rowDragging = false;
+    let rowMoved    = false;
+    let rowStartX   = 0;
+    let rowScrollX  = 0;
+    const DRAG_THRESHOLD = 5;
+
+    circlesRow.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      rowDragging = true;
+      rowMoved    = false;
+      rowStartX   = e.clientX;
+      rowScrollX  = circlesOuter.scrollLeft;  // outer is the scroll container
+      circlesRow.classList.add('dragging');
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!rowDragging) return;
+      const dx = e.clientX - rowStartX;
+      if (Math.abs(dx) > DRAG_THRESHOLD) rowMoved = true;
+      circlesOuter.scrollLeft = rowScrollX - dx;
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!rowDragging) return;
+      rowDragging = false;
+      circlesRow.classList.remove('dragging');
+    });
+
+    // Block click after drag
+    circlesRow.addEventListener('click', e => {
+      if (rowMoved) { e.stopPropagation(); e.preventDefault(); rowMoved = false; }
+    }, true);
+
+    // ── Init ───────────────────────────────────────────────────────
+    buildCircles();
+    if (catalog.length) applyMaterial(catalog[0]);
+
+  </script>
+
+</body>
+</html>
