@@ -56,18 +56,17 @@
     .cat-btn:hover { color: #fff; }
     .cat-btn.active { color: #fff; }
 
-    /* Mobile Category Dropdown */
-    .cat-select-wrap {
+    /* ── Custom Mobile Dropdown ────────────────────────────────── */
+    .cat-custom-dropdown {
       display: none;
       position: relative;
       width: 100%;
-      max-width: 280px;
+      max-width: 290px;
       margin: 0 auto;
+      z-index: 1000;
     }
-    .cat-select {
+    .cat-dropdown-trigger {
       width: 100%;
-      appearance: none;
-      -webkit-appearance: none;
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.22);
       border-radius: 8px;
@@ -77,28 +76,80 @@
       font-weight: 700;
       letter-spacing: 0.12em;
       text-transform: uppercase;
-      padding: 9px 36px 9px 16px;
-      text-align: center;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       cursor: pointer;
       outline: none;
       transition: border-color 0.2s, background 0.2s;
     }
-    .cat-select:focus {
-      border-color: rgba(255, 255, 255, 0.6);
+    .cat-dropdown-trigger:hover, .cat-dropdown-trigger:focus {
+      border-color: rgba(255, 255, 255, 0.5);
       background: rgba(255, 255, 255, 0.12);
     }
-    .cat-select option {
-      background: #14161a;
+    .cat-dropdown-arrow {
+      font-size: 0.55rem;
+      color: rgba(255, 255, 255, 0.6);
+      transition: transform 0.25s ease;
+    }
+    .cat-custom-dropdown.open .cat-dropdown-arrow {
+      transform: rotate(180deg);
+    }
+    .cat-dropdown-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      width: 100%;
+      max-height: 280px;
+      overflow-y: auto;
+      background: rgba(14, 15, 18, 0.97);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85);
+      padding: 6px;
+      z-index: 1001;
+    }
+    .cat-custom-dropdown.open .cat-dropdown-menu {
+      display: block;
+      animation: dropdownFade 0.18s ease-out;
+    }
+    @keyframes dropdownFade {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .cat-dropdown-item {
+      width: 100%;
+      background: none;
+      border: none;
+      border-radius: 6px;
+      color: rgba(255, 255, 255, 0.65);
+      font-family: inherit;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 9px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .cat-dropdown-item:hover {
+      background: rgba(255, 255, 255, 0.09);
       color: #fff;
     }
-    .cat-select-icon {
-      position: absolute;
-      right: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      pointer-events: none;
-      font-size: 0.60rem;
-      color: rgba(255, 255, 255, 0.6);
+    .cat-dropdown-item.active {
+      background: rgba(255, 255, 255, 0.14);
+      color: #fff;
+    }
+    .cat-dropdown-count {
+      font-size: 0.64rem;
+      opacity: 0.6;
     }
 
     /* ── Responsive adjustments for mobile ─────────────────────── */
@@ -110,7 +161,7 @@
       .cat-btn {
         display: none;
       }
-      .cat-select-wrap {
+      .cat-custom-dropdown {
         display: block;
       }
       #rot-ctrl {
@@ -314,39 +365,81 @@
       nav.appendChild(btn);
     });
 
-    // 2. Mobile category dropdown
-    const selectWrap = document.createElement('div');
-    selectWrap.className = 'cat-select-wrap';
+    // 2. Custom Mobile Category Dropdown
+    const dropdownWrap = document.createElement('div');
+    dropdownWrap.className = 'cat-custom-dropdown';
 
-    const selectEl = document.createElement('select');
-    selectEl.className = 'cat-select';
-    selectEl.id = 'cat-select';
+    const triggerBtn = document.createElement('button');
+    triggerBtn.className = 'cat-dropdown-trigger';
+    triggerBtn.type = 'button';
+
+    const triggerLabel = document.createElement('span');
+    triggerLabel.className = 'cat-dropdown-label';
+    triggerLabel.textContent = `TODOS (${catalog.length})`;
+
+    const triggerArrow = document.createElement('span');
+    triggerArrow.className = 'cat-dropdown-arrow';
+    triggerArrow.textContent = '▼';
+
+    triggerBtn.appendChild(triggerLabel);
+    triggerBtn.appendChild(triggerArrow);
+    dropdownWrap.appendChild(triggerBtn);
+
+    const dropdownMenu = document.createElement('div');
+    dropdownMenu.className = 'cat-dropdown-menu';
 
     cats.forEach(cat => {
-      const opt = document.createElement('option');
-      opt.value = cat;
       const count = cat === 'Todos' ? catalog.length : catalog.filter(m => m.category === cat).length;
-      opt.textContent = `${cat.toUpperCase()} (${count})`;
-      selectEl.appendChild(opt);
+      const itemBtn = document.createElement('button');
+      itemBtn.className = 'cat-dropdown-item' + (cat === activeCat ? ' active' : '');
+      itemBtn.type = 'button';
+      itemBtn.dataset.cat = cat;
+
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = cat.toUpperCase();
+
+      const countSpan = document.createElement('span');
+      countSpan.className = 'cat-dropdown-count';
+      countSpan.textContent = `(${count})`;
+
+      itemBtn.appendChild(nameSpan);
+      itemBtn.appendChild(countSpan);
+
+      itemBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setCategory(cat);
+        dropdownWrap.classList.remove('open');
+      });
+
+      dropdownMenu.appendChild(itemBtn);
     });
 
-    selectEl.addEventListener('change', (e) => {
-      setCategory(e.target.value);
+    dropdownWrap.appendChild(dropdownMenu);
+    nav.appendChild(dropdownWrap);
+
+    // Toggle menu open/close
+    triggerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdownWrap.classList.toggle('open');
     });
 
-    const selectIcon = document.createElement('span');
-    selectIcon.className = 'cat-select-icon';
-    selectIcon.textContent = '▼';
-
-    selectWrap.appendChild(selectEl);
-    selectWrap.appendChild(selectIcon);
-    nav.appendChild(selectWrap);
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!dropdownWrap.contains(e.target)) {
+        dropdownWrap.classList.remove('open');
+      }
+    });
 
     function setCategory(cat) {
       activeCat = cat;
-      selectEl.value = cat;
+      const count = cat === 'Todos' ? catalog.length : catalog.filter(m => m.category === cat).length;
+      triggerLabel.textContent = `${cat.toUpperCase()} (${count})`;
+
       document.querySelectorAll('.cat-btn').forEach(b => {
         b.classList.toggle('active', b.textContent.startsWith(cat.toUpperCase()));
+      });
+      document.querySelectorAll('.cat-dropdown-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.cat === cat);
       });
       buildCircles();
     }
