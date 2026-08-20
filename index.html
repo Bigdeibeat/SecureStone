@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Casabona Mármoles</title>
 
   <!-- Three.js r160 ESM via importmap -->
@@ -23,6 +23,7 @@
       color: #fff;
       font-family: 'Helvetica Neue', Arial, sans-serif;
       height: 100vh;
+      height: 100dvh;        /* Real dynamic height for mobile browsers */
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -103,7 +104,7 @@
     /* ── Responsive adjustments for mobile ─────────────────────── */
     @media (max-width: 860px) {
       #nav {
-        padding: 28px 16px 14px;
+        padding: max(26px, env(safe-area-inset-top, 26px)) 16px 12px;
         gap: 0;
       }
       .cat-btn {
@@ -113,14 +114,16 @@
         display: block;
       }
       #rot-ctrl {
-      padding: 4px 16px 6px;
-    }
+        padding: 4px 16px 6px;
+      }
       #material-name {
         padding: 6px 0 8px;
         font-size: 0.74rem;
       }
       #circles-outer {
-        height: 80px;
+        height: 86px;
+        padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
+        margin-bottom: 6px;
         -webkit-mask-image: linear-gradient(to right, transparent 0%, black 50px, black calc(100% - 50px), transparent 100%);
         mask-image: linear-gradient(to right, transparent 0%, black 50px, black calc(100% - 50px), transparent 100%);
       }
