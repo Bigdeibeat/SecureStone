@@ -124,8 +124,8 @@
         height: 86px;
         padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
         margin-bottom: 6px;
-        -webkit-mask-image: linear-gradient(to right, transparent 0%, black 50px, black calc(100% - 50px), transparent 100%);
-        mask-image: linear-gradient(to right, transparent 0%, black 50px, black calc(100% - 50px), transparent 100%);
+        -webkit-mask-image: linear-gradient(to right, transparent 0%, black 25px, black calc(100% - 25px), transparent 100%);
+        mask-image: linear-gradient(to right, transparent 0%, black 25px, black calc(100% - 25px), transparent 100%);
       }
       .mat-circle {
         width: 52px;
@@ -440,7 +440,13 @@
       });
     }
 
-    // ── HDRI ───────────────────────────────────────────────────────
+    // ── HDRI Lighting with Instant Initial Fallback ────────────────
+    const tempAmbient = new THREE.AmbientLight(0xffffff, 1.4);
+    const tempDir = new THREE.DirectionalLight(0xffffff, 0.8);
+    tempDir.position.set(2, 4, 3);
+    scene.add(tempAmbient);
+    scene.add(tempDir);
+
     const pmrem = new THREE.PMREMGenerator(renderer);
     pmrem.compileEquirectangularShader();
 
@@ -449,6 +455,8 @@
       hdr.dispose();
       pmrem.dispose();
       scene.environment = env;   // reflections only, bg stays black
+      scene.remove(tempAmbient); // remove temp lights once real HDRI is loaded
+      scene.remove(tempDir);
     });
 
     // ── Auto-rotation speed slider ──────────────────────────────────
@@ -516,14 +524,33 @@
       wrap.classList.remove('dragging');
     });
 
-    // Touch support
+    // Touch support (restricted to cube via raycast)
+    let touchOnCube = false;
     let prevTX = 0, prevTY = 0;
+
     wrap.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) return;
       const t = e.touches[0];
+
+      // Check if touch starts on the cube
+      const rect = wrap.getBoundingClientRect();
+      pointer.x =  ((t.clientX - rect.left)  / rect.width)  * 2 - 1;
+      pointer.y = -((t.clientY - rect.top)   / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObject(cube);
+      if (hits.length === 0) {
+        touchOnCube = false;
+        return; // touch on background → ignore
+      }
+
+      touchOnCube = true;
+      dragging = true;
       prevTX = t.clientX; prevTY = t.clientY;
       velX = 0; velY = 0;
     }, { passive: true });
+
     wrap.addEventListener('touchmove', e => {
+      if (!touchOnCube || !dragging || e.touches.length !== 1) return;
       const t = e.touches[0];
       const dx = t.clientX - prevTX, dy = t.clientY - prevTY;
       velY =  dx * 0.008; velX = dy * 0.008;
@@ -531,6 +558,20 @@
       cube.rotateOnWorldAxis(WORLD_AXIS_X, velX);
       prevTX = t.clientX; prevTY = t.clientY;
     }, { passive: true });
+
+    window.addEventListener('touchend', () => {
+      if (touchOnCube) {
+        touchOnCube = false;
+        dragging = false;
+      }
+    });
+
+    window.addEventListener('touchcancel', () => {
+      if (touchOnCube) {
+        touchOnCube = false;
+        dragging = false;
+      }
+    });
 
     // ── Resize ─────────────────────────────────────────────────────
     function resize() {
@@ -590,9 +631,11 @@
         div.dataset.id   = item.id;
         div.dataset.name = item.name;
         const img = document.createElement('img');
-        img.src     = item.maps.diffuse;
-        img.alt     = item.name;
-        img.loading = 'lazy';
+        img.src           = item.maps.diffuse;
+        img.alt           = item.name;
+        img.loading       = 'lazy';
+        img.decoding      = 'async';
+        img.fetchPriority = 'low';
         div.appendChild(img);
 
         // Tooltip events
@@ -655,9 +698,13 @@
       if (rowMoved) { e.stopPropagation(); e.preventDefault(); rowMoved = false; }
     }, true);
 
-    // ── Init ───────────────────────────────────────────────────────
-    buildCircles();
+    // ── Init: Priority 1 - Load active cube material immediately ───
     if (catalog.length) applyMaterial(catalog[0]);
+
+    // ── Init: Priority 2 - Defer circles generation to keep first render instant ───
+    requestAnimationFrame(() => {
+      buildCircles();
+    });
 
   </script>
 
