@@ -533,23 +533,15 @@
       });
     }
 
-    // ── HDRI Lighting with Instant Initial Fallback ────────────────
-    const tempAmbient = new THREE.AmbientLight(0xffffff, 1.4);
-    const tempDir = new THREE.DirectionalLight(0xffffff, 0.8);
-    tempDir.position.set(2, 4, 3);
-    scene.add(tempAmbient);
-    scene.add(tempDir);
-
+    // ── HDRI Lighting (1K Ultra-Fast) ─────────────────────────────
     const pmrem = new THREE.PMREMGenerator(renderer);
     pmrem.compileEquirectangularShader();
 
-    new RGBELoader().load('assets/env/brown_photostudio_01_4k.hdr', (hdr) => {
+    new RGBELoader().load('assets/env/brown_photostudio_01_1k.hdr', (hdr) => {
       const env = pmrem.fromEquirectangular(hdr).texture;
       hdr.dispose();
       pmrem.dispose();
       scene.environment = env;   // reflections only, bg stays black
-      scene.remove(tempAmbient); // remove temp lights once real HDRI is loaded
-      scene.remove(tempDir);
     });
 
     // ── Auto-rotation speed slider ──────────────────────────────────
