@@ -150,37 +150,7 @@
       opacity: 0.6;
     }
 
-    /* ── Responsive adjustments for mobile ─────────────────────── */
-    @media (max-width: 860px) {
-      #nav {
-        padding: max(26px, env(safe-area-inset-top, 26px)) 16px 12px;
-        gap: 0;
-      }
-      .cat-btn {
-        display: none;
-      }
-      .cat-custom-dropdown {
-        display: block;
-      }
-      #rot-ctrl {
-        padding: 4px 16px 6px;
-      }
-      #material-name {
-        padding: 6px 0 8px;
-        font-size: 0.74rem;
-      }
-      #circles-outer {
-        height: 86px;
-        padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
-        margin-bottom: 6px;
-        -webkit-mask-image: linear-gradient(to right, transparent 0%, black 25px, black calc(100% - 25px), transparent 100%);
-        mask-image: linear-gradient(to right, transparent 0%, black 25px, black calc(100% - 25px), transparent 100%);
-      }
-      .mat-circle {
-        width: 52px;
-        height: 52px;
-      }
-    }
+
 
     /* ── 3D canvas area ───────────────────────────────────────── */
     #canvas-wrap {
@@ -262,7 +232,7 @@
       width: 58px;
       height: 58px;
       border-radius: 50%;
-      border: 2px solid rgba(255,255,255,0.55);
+      border: 2px solid rgba(255, 255, 255, 0.75);
       overflow: hidden;
       cursor: pointer;
       flex-shrink: 0;
@@ -295,6 +265,38 @@
       transition: opacity 0.12s;
       z-index: 9999;
       transform: translate(14px, -50%);
+    }
+
+    /* ── Responsive adjustments for mobile ─────────────────────── */
+    @media (max-width: 860px) {
+      #nav {
+        padding: max(26px, env(safe-area-inset-top, 26px)) 16px 12px;
+        gap: 0;
+      }
+      .cat-btn {
+        display: none;
+      }
+      .cat-custom-dropdown {
+        display: block;
+      }
+      #rot-ctrl {
+        padding: 4px 16px 6px;
+      }
+      #material-name {
+        padding: 6px 0 8px;
+        font-size: 0.74rem;
+      }
+      #circles-outer {
+        height: 86px;
+        padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
+        margin-bottom: 6px;
+        -webkit-mask-image: linear-gradient(to right, transparent 0%, black 50px, black calc(100% - 50px), transparent 100%) !important;
+        mask-image: linear-gradient(to right, transparent 0%, black 50px, black calc(100% - 50px), transparent 100%) !important;
+      }
+      .mat-circle {
+        width: 52px;
+        height: 52px;
+      }
     }
   </style>
 </head>
